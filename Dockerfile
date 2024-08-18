@@ -16,7 +16,7 @@ COPY requirements.txt requirements.txt
 
 RUN echo "export PATH=$HOME/bin:$HOME/go/bin:$HOME/.pdtm/go/bin:$PATH" >> /etc/profile \
     && apk -U upgrade --no-cache \
-    && apk add --no-cache git curl bind-tools chromium ca-certificates python3 py3-pip vim nano \
+    && apk add --no-cache git curl bind-tools chromium ca-certificates openssh python3 py3-pip vim nano \
     && update-ca-certificates \
     && python -m ensurepip \
     && pip install -r requirements.txt \
@@ -25,7 +25,17 @@ RUN echo "export PATH=$HOME/bin:$HOME/go/bin:$HOME/.pdtm/go/bin:$PATH" >> /etc/p
     && source /etc/profile && pdtm -install-all \
     && rm -rf /var/cache/apk/*
 
+RUN echo 'root:root' |chpasswd \
+    && sed -ri 's/^#?PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config \
+    && sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config \
+    && mkdir /root/.ssh \
+    && ssh-keygen -A
+
 # Add the following line to the Dockerfile to set the WORKDIR
 WORKDIR /root
 ENV ENV="/etc/profile"
 ENV PATH=/root/bin:/root/go/bin:/root/.pdtm/go/bin:$PATH
+
+EXPOSE 22
+CMD    ["/usr/sbin/sshd", "-D"]
